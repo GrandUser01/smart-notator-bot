@@ -2,6 +2,8 @@ import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import requests
+import signal
+import sys
 from flask import Flask, request
 
 # Зчитуємо токени з середовища
@@ -40,41 +42,48 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = query_gemini(user_message)
     await update.message.reply_text(response)
 
-# Flask додаток для запуску на Render (відкриває порт)
-flask_app = Flask(__name__)
+# Запуск бота
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
-@flask_app.route('/')
-def index():
-    return 'Bot is running...'
+    # Flask додаток для запуску на Render (відкриває порт)
+    flask_app = Flask(__name__)
 
-@flask_app.route('/webhook', methods=['POST'])
-def webhook():
-    json_str = request.get_data().decode('UTF-8')
-    update = Update.de_json(json_str, app.bot)
-    app.process_new_updates([update])
-    return 'ok'
+    @flask_app.route('/')
+    def index():
+        return 'Bot is running...'
+
+    # Оновлений webhook
+    @flask_app.route('/webhook', methods=['POST'])
+    def webhook():
+        # Отримуємо дані у форматі JSON
+        json_data = request.get_json()
+
+        # Перевіряємо, чи отримано правильні дані
+        if json_data:
+            update = Update.de_json(json_data, app.bot)
+            app.process_new_updates([update])
+            return 'ok'
+        else:
+            return 'Invalid data received', 400
+
+    # Слухати порт
+    port = os.environ.get("PORT", 8080)  # Render відкриває порт 8080 за замовчуванням
+    flask_app.run(host='0.0.0.0', port=port)
 
 # Налаштування Webhook для Telegram
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://smart-notator-bot.onrender.com")
+WEBHOOK_URL = 'https://smart-notator-bot.onrender.com'  # Замініть на URL вашого додатку в Render
 
-# Налаштуйте Webhook для Telegram
+# Налаштуємо Webhook для Telegram
 def set_webhook():
-    webhook_url = f'https://api.telegram.org/bot{BOT_TOKEN}/setWebhook?url={WEBHOOK_URL}/webhook'
+    webhook_url = f'https://api.telegram.org/bot{BOT_TOKEN}/setWebhook?url={WEBHOOK_URL}'
     response = requests.get(webhook_url)
     if response.status_code == 200:
         print("Webhook успішно налаштовано!")
     else:
         print(f"Помилка налаштування Webhook: {response.status_code} - {response.text}")
 
-# Запуск бота
-if __name__ == "__main__":
-    # Telegram Application
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Налаштування Webhook
-    set_webhook()
-
-    # Запуск Flask серверу
-    port = os.environ.get("PORT", 8080)  # Render відкриває порт 8080 за замовчуванням
-    flask_app.run(host='0.0.0.0', port=port)
+# Викликаємо функцію для налаштування Webhook
+set_webhook()
