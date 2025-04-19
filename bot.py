@@ -46,7 +46,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    
+    # Використовуємо run_polling() замість run()
+    app.run_polling()
 
     # Flask додаток для запуску на Render (відкриває порт)
     flask_app = Flask(__name__)
