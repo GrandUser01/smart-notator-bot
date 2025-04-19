@@ -46,6 +46,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
     # Flask додаток для запуску на Render (відкриває порт)
     flask_app = Flask(__name__)
@@ -81,3 +82,5 @@ def set_webhook():
 
 # Викликаємо функцію для налаштування Webhook
 set_webhook()
+
+updater.bot.set_webhook(url="https://smart-notator-bot.onrender.com/webhook")
