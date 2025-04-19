@@ -2,6 +2,9 @@ import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import requests
+import signal
+import sys
+from flask import Flask, request
 
 # Зчитуємо токени з середовища
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -43,5 +46,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Бот запущено...")
-    app.run_polling()
+
+    # Flask додаток для запуску на Render (відкриває порт)
+    flask_app = Flask(__name__)
+
+    @flask_app.route('/')
+    def index():
+        return 'Bot is running...'
+
+    @flask_app.route('/webhook', methods=['POST'])
+    def webhook():
+        json_str = request.get_data().decode('UTF-8')
+        update = Update.de_json(json_str, app.bot)
+        app.process_new_updates([update])
+        return 'ok'
+
+    # Слухати порт
+    port = os.environ.get("PORT", 8080)  # Render відкриває порт 8080 за замовчуванням
+    flask_app.run(host='0.0.0.0', port=port)
