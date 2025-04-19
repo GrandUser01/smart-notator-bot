@@ -1,46 +1,47 @@
 import os
-import logging
-import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+import requests
 
-# --- Налаштування логування ---
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Зчитуємо токени з середовища
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# --- Змінні середовища ---
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not BOT_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN is not set!")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY is not set!")
 
-# --- Функція запиту до Gemini ---
-def ask_gemini(prompt):
+# Функція, яка надсилає запит до Gemini
+def query_gemini(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
     data = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
+        "contents": [
+            {
+                "parts": [{"text": prompt}]
+            }
+        ]
     }
     response = requests.post(url, headers=headers, json=data)
     if response.ok:
-        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
-    return "Помилка з боку Gemini :("
+        candidates = response.json().get("candidates", [])
+        if candidates:
+            return candidates[0]["content"]["parts"][0]["text"]
+        else:
+            return "Не вдалося отримати відповідь від Gemini."
+    else:
+        return f"Помилка від Gemini: {response.status_code} - {response.text}"
 
-# --- Обробник повідомлень ---
+# Обробник повідомлень
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
-    reply = ask_gemini(user_message)
-    await update.message.reply_text(reply)
+    response = query_gemini(user_message)
+    await update.message.reply_text(response)
 
-# --- Обробник команди /start ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привіт! Я — SmartNotatorBot. Просто напиши мені щось, і я відповім через Gemini.")
-
-# --- Запуск бота ---
-def main():
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
-
+# Запуск бота
 if __name__ == "__main__":
-    main()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    print("Бот запущено...")
+    app.run_polling()
