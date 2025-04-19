@@ -64,3 +64,20 @@ if __name__ == "__main__":
     # Слухати порт
     port = os.environ.get("PORT", 8080)  # Render відкриває порт 8080 за замовчуванням
     flask_app.run(host='0.0.0.0', port=port)
+
+import requests
+
+# Налаштування Webhook для Telegram
+WEBHOOK_URL = 'https://smart-notator-bot.onrender.com'  # Замініть на URL вашого додатку в Render
+
+# Налаштуйте Webhook для Telegram
+def set_webhook():
+    webhook_url = f'https://api.telegram.org/bot{BOT_TOKEN}/setWebhook?url={WEBHOOK_URL}'
+    response = requests.get(webhook_url)
+    if response.status_code == 200:
+        print("Webhook успішно налаштовано!")
+    else:
+        print(f"Помилка налаштування Webhook: {response.status_code} - {response.text}")
+
+# Викликаємо функцію для налаштування Webhook
+set_webhook()
