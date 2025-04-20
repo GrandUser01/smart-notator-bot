@@ -11,4 +11,4 @@ services:
       - key: BOT_TOKEN
         value: 8171124072:AAG5U41xfT97yjjpxYCQrO_aa_V7y7TeOcA
       - key: WEBHOOK_URL
-        value: https://your-app.onrender.com
+        value: https://smart-notator-bot.onrender.com
