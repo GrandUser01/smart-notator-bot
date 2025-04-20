@@ -43,7 +43,7 @@ def index():
 if __name__ == "__main__":
     async def main():
         await application.initialize()
-        await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+        await application.bot.set_webhook(f"{WEBHOOK_URL}")
         print("Webhook успішно налаштовано!")
         app.run(host="0.0.0.0", port=10000)
 
