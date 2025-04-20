@@ -8,7 +8,7 @@ services:
     startCommand: "python bot.py"
     webServerPort: 10000
     envVars:
-      - key: BOT_TOKEN
+      - key: TELEGRAM_TOKEN
         value: your-bot-token-here
       - key: WEBHOOK_URL
         value: https://your-app.onrender.com
