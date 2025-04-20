@@ -9,6 +9,6 @@ services:
     webServerPort: 10000
     envVars:
       - key: BOT_TOKEN
-        value: your-bot-token-here
+        value: 8171124072:AAG5U41xfT97yjjpxYCQrO_aa_V7y7TeOcA
       - key: WEBHOOK_URL
         value: https://your-app.onrender.com
