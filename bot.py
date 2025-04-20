@@ -1,59 +1,60 @@
 import os
-import logging
 import asyncio
 from flask import Flask, request
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
-import google.generativeai as genai
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+)
 
-# Логування
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Ключі
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
-# Ініціалізація Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-pro")
-
-# Flask app
+# Ініціалізація Flask
 app = Flask(__name__)
 
-# Telegram Application
-application = Application.builder().token(TELEGRAM_TOKEN).build()
+# Отримуємо токен з оточення
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")  # наприклад: https://your-app.onrender.com/webhook
 
-# Хендлер для повідомлень
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
-    try:
-        gemini_response = model.generate_content(user_message)
-        reply_text = gemini_response.text
-    except Exception as e:
-        logger.error(f"Gemini error: {e}")
-        reply_text = "Вибач, сталася помилка при зверненні до Gemini."
-    
-    await update.message.reply_text(reply_text)
+# Створюємо Telegram Application
+application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+# === Обробники команд ===
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Привіт! Бот працює!")
 
-# Ця частина була відсутня — вона ініціалізує application!
-@app.before_first_request
-def initialize_app():
-    asyncio.get_event_loop().run_until_complete(application.initialize())
+# Додаємо обробники до application
+application.add_handler(CommandHandler("start", start))
 
-# Webhook endpoint
+# === Одноразова ініціалізація ===
+application_initialized = False
+
+@app.before_request
+def init_application_once():
+    global application_initialized
+    if not application_initialized:
+        asyncio.get_event_loop().run_until_complete(application.initialize())
+        application_initialized = True
+
+# === Webhook ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    if request.method == "POST":
-        update = Update.de_json(request.get_json(force=True), application.bot)
-        asyncio.run(application.process_update(update))
-        return "OK", 200
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    asyncio.run(application.process_update(update))
+    return "ok"
 
+# === Кореневий маршрут для перевірки — необов’язково ===
 @app.route("/", methods=["GET"])
 def index():
-    return "Bot is running..."
+    return "Telegram Bot is running!"
 
+# === Запуск сервера ===
 if __name__ == "__main__":
+    # Встановлюємо webhook (тільки під час запуску)
+    async def set_webhook():
+        await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+        print("Webhook успішно налаштовано!")
+
+    asyncio.get_event_loop().run_until_complete(set_webhook())
+
+    # Flask слухає порт 10000 — Render шукає відкритий порт
     app.run(host="0.0.0.0", port=10000)
