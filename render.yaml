@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: smart-notator-bot
+    name: telegram-bot
     env: python
-    buildCommand: ""
-    startCommand: python bot.py
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    webServerPort: 10000
     envVars:
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-    plan: free
+      - key: BOT_TOKEN
+        value: your-bot-token-here
+      - key: WEBHOOK_URL
+        value: https://your-app.onrender.com
