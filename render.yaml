@@ -2,7 +2,9 @@ services:
   - type: web
     name: telegram-bot
     env: python
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: |
+      apt-get update && apt-get install -y gcc python3-dev libssl-dev libffi-dev && rm -rf /var/lib/apt/lists/*
+      pip install -r requirements.txt
     startCommand: "python bot.py"
     webServerPort: 10000
     envVars:
